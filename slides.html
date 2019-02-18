@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Title</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: "Lucida Grande", sans-serif;
+    }
+
+    .remark-code, .remark-inline-code {
+      font-family: 'Monaco', monospace;
+    }
+
+    .remark-slide-content {
+      background: #272822;
+      color: white;
+      text-shadow: 0 0 20px #333;
+      font-size: 30px;
+      line-height: 2;
+    }
+
+    .remark-slide-content h1 {
+      font-size: 52px;
+    }
+  </style>
+</head>
+<body>
+<textarea id="source">
+  class: center, middle
+
+  # Actionable Code Coverage
+
+  &nbsp;
+
+  ???
+
+  This talk is about understanding code coverage internals and
+  how to turn coverage it into a helpful tool instead of just an afterthought.
+
+  ---
+  class: center, middle
+
+  # Actionable Code Coverage
+
+  github.com/grosser/ruby-coverage-talk
+
+  ???
+
+  not a talk, but a repo with repo with runnable examples and slides written in markdown
+
+  ---
+
+  # Michael Grosser
+
+  Principal Engineer @ Zendesk<br/>
+  (Hiring in SF/Madison/Dublin/CPH/Sydney)
+
+  <table>
+    <tr>
+      <td><img width="230" src="assets/Avatar.png"></img></td>
+      <td>&nbsp;&nbsp;</td>
+      <td style="vertical-align: top">
+        rubygems.org grosser<br/>
+        github.com/grosser<br/>
+        twitter.com/grosser<br/>
+        grosser.it
+      </td>
+    </tr>
+  </table>
+
+  ???
+
+  My job is to help other devs by building infrastructure to make them more efficient.
+
+  I've build lots of gems for testing and coverage and onboarded giant projects on them.
+
+  This talk is a deep dive into what new developers should know about coverage.
+
+  ---
+
+  # Plan
+
+  - Code Coverage Internals
+  - Making Coverage Actionable
+  - Hacking Forked Coverage
+  - Wishlist for Coverage.so
+
+  ???
+
+  - action: problems with current approaches, how to improve them, how to onboard or covert a projects
+
+  ---
+
+  # Code Coverage Internals
+
+  TODO
+
+  how code coverage works in ruby (regular vs branch vs oneshot)
+  inline examples here and their results
+
+  ---
+
+  # Plan
+
+  - <del>Code Coverage Internals</del>
+  - Making Coverage Actionable
+  - Hacking Forked Coverage
+  - Wishlist for Coverage.so
+
+  ---
+
+  # Problems
+
+  - Slow feedback
+  - Impossible to reach 100% coverage
+  - Bikeshedding about what % is ok
+  - Complicated setup
+  - Coarse coverage calculations
+
+  ???
+
+  - slow: have to make PR, run all tests, open browser
+  - 100%: setup code and edge-cases
+  - bike: 100% cannot be reached so we guess, feels like broken window
+  - setup: install hooks / pay providers / explain to contributors
+  - coarse: rewrite a statement to be readable and suddenly it's not covered
+
+  ---
+
+  # Solution
+
+  - quick, atomic development feedback
+  - always 100% and configure allowed gaps
+  - simple/local/free setup
+  - fine grained coverage
+
+  ???
+
+  - quick: run a single file, small runtime overhead, console output
+  - 100% avoid broken windows, call out gaps explicitly
+
+  ---
+
+  # How SingleCov Can Save You
+
+  TODO: 1 slide per item
+
+  - Missing coverage on every 💚 run
+  - Catch coverage issues before making PRs
+  - Easily add coverage enforcement for legacy apps
+  - 2-5% runtime overhead on small files, compared to 50% for SimpleCov
+  - Branch coverage on ruby 2.5+ (disable via branches: false)
+  - Use with forking_test_runner for per test coverage
+
+  ---
+
+  # Onboarding
+
+  for small and large codebases (automated onboarding + divide & conquer)
+
+  show how inline comments can be used to mark uncovered danger-zones and reduce expected coverage
+
+  ---
+
+  # Plan
+
+  - <del>Code Coverage Internals</del>
+  - <del>Making Coverage Actionable</del>
+  - Hacking Forked Coverage
+  - Wishlist for Coverage.so
+
+  ---
+
+  # Hacking forked coverage
+
+  how to hack forked code coverage with forking-test-runner
+
+  ---
+
+  # Plan
+
+  - <del>Code Coverage Internals</del>
+  - <del>Making Coverage Actionable</del>
+  - <del>Hacking Forked Coverage</del>
+  - Wishlist for Coverage.so
+
+  ---
+
+  # Wishlist for Coverage.so
+
+  - forking support
+  - one-shot with line numbers
+  - tracking default parameters (once called with and without)
+  - tracking conditionals like `a && b` which is `b if a`
+
+  ---
+  class: center, middle
+
+  # Thank you!
+
+  github.com/grosser/ruby-coverage-talk
+
+</textarea>
+<script src="assets/remark-latest.min.js">
+</script>
+<script>
+  remark.create();
+</script>
+</body>
+</html>
