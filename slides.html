@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Title</title>
+  <title>Actionable Code Coverage</title>
   <meta charset="utf-8">
   <style>
     body {
@@ -20,8 +20,21 @@
       line-height: 2;
     }
 
+    .remark-slide-content pre {
+      text-shadow: none;
+    }
+
     .remark-slide-content h1 {
       font-size: 52px;
+    }
+
+    .remark-slide-number {
+      display: none;
+    }
+
+    .table th, .table td {
+      padding: 5px 10px;
+      text-align: right;
     }
   </style>
 </head>
@@ -47,13 +60,15 @@
 
   ???
 
-  not a talk, but a repo with repo with runnable examples and slides written in markdown
+  not a talk, but a repo with runnable examples and slides written in markdown to be maintainable
+  a deep dive into what new developers should know about coverage and
+  how to better utilize coverage.
 
   ---
 
   # Michael Grosser
 
-  Principal Engineer @ Zendesk<br/>
+  Staff Engineer @ Zendesk<br/>
   (Hiring in SF/Madison/Dublin/CPH/Sydney)
 
   <table>
@@ -71,42 +86,235 @@
 
   ???
 
-  My job is to help other devs by building infrastructure to make them more efficient.
+  Big part of my job is to help other devs by building infrastructure to make them more efficient.
 
   I've build lots of gems for testing and coverage and onboarded giant projects on them.
-
-  This talk is a deep dive into what new developers should know about coverage.
 
   ---
 
   # Plan
 
   - Code Coverage Internals
-  - Making Coverage Actionable
-  - Hacking Forked Coverage
+  - Actionable Coverage
+  - Hack forked coverage
   - Wishlist for Coverage.so
 
   ???
 
-  - action: problems with current approaches, how to improve them, how to onboard or covert a projects
+  - internals: get everyone onto the same level
+  - action: problems with current approaches, how to improve them, how to migrate projects piecemeal without breaking
+  - fork: how parallel processes can share coverage calculations
 
   ---
 
   # Code Coverage Internals
 
-  TODO
+  - Needs to be enabled
+  - Hooks around newly loaded code
+  - Not retroactive
+  - Not free
 
-  how code coverage works in ruby (regular vs branch vs oneshot)
-  inline examples here and their results
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/coverage_line.rb -->
+  ```Ruby
+  require 'coverage' # -> coverage.so
+  Coverage.start     # enable for newly loaded code
+  require_relative 'example'
+  example
+  Coverage.result    # disable
+
+  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+  ```
+
+  ???
+
+  - result has side-effect of disabling, can use peek_result
+  - 1 = hit once
+  - 0 = never hit
+  - nil = not code (end/else etc)
+
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+
+  def example             # Covered
+    if 1 == 2             # Covered
+      "a"                 # Not-Covered
+    else                  # -
+      3 == 2 ? "b" : "c"  # Covered
+    end                   # -
+  end                     # -
+  ```
+
+  ???
+
+  - we hit example and the second branch
+  - problem: 3==2 has 2 outcomes, "b" never reached ... should rewrite as *next slide*
+
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/example_expanded.rb -->
+  ```Ruby
+  {"example.rb"=>[1, 1, 0, nil, 1, 0, nil, 1, nil, nil, nil]}
+                                =================
+  ...
+      if 3 == 2           # Covered
+        "b"               # Not Covered
+      else                # -
+        "c"               # Covered
+      end                 # -
+  ...
+  ```
+
+  ???
+
+  - enforce via rubocop ?
+  - use branch coverage! 2.5+
+
+  ---
+
+  # Branch Coverage
+
+  <!-- see 01-Internals/coverage_branch.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start branches: true # Ruby 2.5+
+  require_relative 'example'
+  example
+  Coverage.result
+  ```
+
+  ???
+
+  - easy right ? *next slide* NO!
+
+  ---
+
+  # Branch Coverage
+
+  ```Ruby
+  "example.rb"=>{:branches=>{
+    [:if, 0, 5, 4, 5, 22]=>{
+      [:then, 1, 5, 13, 5, 16]=>0,
+      [:else, 2, 5, 19, 5, 22]=>1
+    },
+    [:if, 3, 2, 2, 6, 5]=>{
+      [:then, 4, 3, 4, 3, 7]=>0,
+      [:else, 5, 5, 4, 5, 22]=>1
+    }
+  ```
+
+  ???
+
+  - big hash where keys are the branches ... ignore + first 2 items are kind+index ... ignore
+  - only care for last 4 items ... look back at code
+
+  ---
+
+  # Branch Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  # line 5 c 4-22 = Y | line 5 c 13 16 = N | line 5 c 19-22 = Y
+
+  def example
+    if 1 == 2
+      "a"
+    else
+      3 == 2 ? "b" : "c"
+      YYYYYYYYYYYYYYYYYY
+               NNN   YYY
+    end
+  end
+  ```
+
+  ???
+
+  - "a" is not covered, but else is covered ... "b" is not covered, but "c" is
+  - with these basic tool it's easy to build coverage analysis
+  - why not always branch ? efficiency is bad especially when run in prod to find dead code... use oneshot
+
+  ---
+
+  # Oneshot Coverage
+
+  <!-- see 01-Internals/coverage_oneshot.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start oneshot_lines: true # Ruby 2.6+
+  require_relative 'example'
+  5.times { example }
+  Coverage.result
+  {"example.rb"=>{:oneshot_lines=>[1, 2, 5]}}
+  ```
+
+  ???
+
+  - after a part is executed the counter code is removed, removing performance penalty
+  - does not offer oneshot_branches ... so incomplete
+
+  ---
+
+  # Oneshot Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  def example             # Covered
+    if 1 == 2             # Covered
+      "a"                 # ?
+    else                  # ?
+      3 == 2 ? "b" : "c"  # Covered
+    end                   # ?
+  end                     # ?
+  ```
+
+  ???
+
+  - only shows the line number that are covered, not uncovered, so bad for automatic reporting (no nils)
+
+  ---
+
+  # Coverage Performance
+
+  <table class="table">
+    <tr><th></th><th>Lines</th><th>Branches</th><th>Oneshot</th></tr>
+    <!-- run 01-Internals/benchmark_overhead.rb with different lines commented in -->
+    <tr><th>Ruby</th><td>50%</td><td>100%</td><td>2%</td></tr>
+    <!-- see 01-Internals/benchmark_overhead.rb with different lines commented in -->
+    <tr><td colspan="4"><pre>50_000_000.times { example }</pre></td></tr>
+    <tr><th>Rails</th><td>0.5%</td><td>2.4%</td><td>0%</td></tr>
+    <tr><td colspan="4"><pre>app.get "/"</pre></td></tr>
+  </table>
+
+  ???
+
+  - to improve performance use `set_trace_func` directly via sampling approach
 
   ---
 
   # Plan
 
   - <del>Code Coverage Internals</del>
-  - Making Coverage Actionable
-  - Hacking Forked Coverage
+  - Actionable Coverage
+  - Hack forked coverage
   - Wishlist for Coverage.so
+
+  ---
+
+  # Actionable Coverage
+
+  - Problems
+  - Solution
+  - Migrating
 
   ---
 
@@ -116,11 +324,11 @@
   - Impossible to reach 100% coverage
   - Bikeshedding about what % is ok
   - Complicated setup
-  - Coarse coverage calculations
+  - Hard to parse
 
   ???
 
-  - slow: have to make PR, run all tests, open browser
+  - slow: have to make PR and wait for hook, run all tests, open browser
   - 100%: setup code and edge-cases
   - bike: 100% cannot be reached so we guess, feels like broken window
   - setup: install hooks / pay providers / explain to contributors
@@ -131,75 +339,261 @@
   # Solution
 
   - quick, atomic development feedback
-  - always 100% and configure allowed gaps
+  - mark intentional gaps to get 100%
   - simple/local/free setup
   - fine grained coverage
 
   ???
 
-  - quick: run a single file, small runtime overhead, console output
-  - 100% avoid broken windows, call out gaps explicitly
+  - the solution we need is ...
+  - quick: run a single file, small runtime overhead, exact location, console output
+  - call out gaps explicitly, raise awareness when editing code, 100% avoid broken windows, fail bad PRs
+  - encourage seeking quick local feedback instead of taking a break after PRs
+  - ignore: call out gaps, but keep 100%
 
   ---
 
-  # How SingleCov Can Save You
+  # SingleCov
 
-  TODO: 1 slide per item
+  Missing coverage on every 💚 run
 
-  - Missing coverage on every 💚 run
+  ```Bash
+  rspec spec/foobar_spec.rb
+  ......
+  114 example, 0 failures
+
+  lib/foobar.rb new uncovered lines introduced (2 current vs 0 configured)",
+  Uncovered lines:
+  lib/foobar.rb:22
+  lib/foobar.rb:23
+  ```
+
+  ???
+
   - Catch coverage issues before making PRs
-  - Easily add coverage enforcement for legacy apps
-  - 2-5% runtime overhead on small files, compared to 50% for SimpleCov
+  - Makes PRs fail when coverage is missing
+
+  ---
+
+  # SingleCov
+
+  Automatic bootstrap script to add coverage enforcement for legacy apps
+
+  ```Ruby
+  SingleCov.covered! uncovered: 42
+
+  SingleCov.not_covered!
+
+  SingleCov.assert_used
+
+  SingleCov.assert_tested
+  ```
+
+  ???
+
+  - Stops newly uncovered code and allows slowly working through backlog.
+  - Not-covered for integration tests / shell-out
+  - All configurable to call out gaps explicitly
+
+  ---
+
+  # SingleCov
+
+  - 2-5% runtime overhead on single files, compared to 10-20% for SimpleCov
   - Branch coverage on ruby 2.5+ (disable via branches: false)
   - Use with forking_test_runner for per test coverage
 
   ---
 
-  # Onboarding
+  # Migrating
 
-  for small and large codebases (automated onboarding + divide & conquer)
+  Automated onboarding + divide & conquer
 
-  show how inline comments can be used to mark uncovered danger-zones and reduce expected coverage
+  Inline comments
+
+  ```Ruby
+  SingleCov.covered! uncovered: 1
+  ==
+  SingleCov.covered!
+
+  if this_can_never_happen
+    raise # uncovered
+  end
+  ```
 
   ---
 
   # Plan
 
   - <del>Code Coverage Internals</del>
-  - <del>Making Coverage Actionable</del>
-  - Hacking Forked Coverage
+  - <del>Actionable Coverage</del>
+  - Hack forked coverage
   - Wishlist for Coverage.so
 
   ---
 
-  # Hacking forked coverage
+  # Hack forked coverage
 
-  how to hack forked code coverage with forking-test-runner
+  - Avoid having to run all tests
+  - Unit tests should cover file under test
+  - Fork to capture per-file coverage
+
+  ???
+
+  - Can still have integration tests, but unit have to cover all code
+  - but forking does not play nice with coverage ... *flip*
+
+  ---
+
+  # Hack forked coverage
+
+  Forking resets coverage
+
+  <!-- see 03-forked/forked_reset.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start
+  require_relative 'example'
+  example
+  fork { puts Coverage.result }
+  {"example.rb"=>[0, 0, 0, nil, 0, nil, nil]}
+  ```
+
+  ???
+
+  Makes full coverage unreachable since for example loading the class cannot be done again
+
+  ---
+
+  # Hack forked coverage
+
+
+  ```Ruby
+  # ... load everything
+  stored = Coverage.peek_result
+  fork do
+    # ... test
+    result = Coverage.result.map do |file, cov|
+      old = stored[file]
+      cov.each_with_index.map do |c, i|
+        old[i] ? old[i] + c : c
+      end
+    end
+  end
+  {"example.rb"=>[1, 2, 1, nil, 1, nil, nil]}
+  ```
+
+  ---
+
+  # Hack forked coverage
+
+  ```Bash
+  forking-test-runner test/ --merge-coverage
+  ```
+
+  - handles edge-cases
+  - preloads AR fixtures / helpers etc
+  - handles branch coverage
+
+  ???
+
+  - Gem I built that integrates well with single_cov and makes CI coverage same as local
+  - maybe in the future oneshot
 
   ---
 
   # Plan
 
   - <del>Code Coverage Internals</del>
-  - <del>Making Coverage Actionable</del>
-  - <del>Hacking Forked Coverage</del>
+  - <del>Actionable Coverage</del>
+  - <del>Hack forked coverage</del>
   - Wishlist for Coverage.so
 
   ---
 
   # Wishlist for Coverage.so
 
-  - forking support
-  - one-shot with line numbers
-  - tracking default parameters (once called with and without)
-  - tracking conditionals like `a && b` which is `b if a`
+  Adding coverage in forks without hacks
+
+  <!-- see 04-wishlist/adding.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start add_on_fork: true
+  require_relative 'example'
+  example 1
+  fork do
+    example 2
+    Coverage.result
+  end
+  ```
+
+  ???
+
+  Especially for branches lots of logic
+
+  ---
+
+  # Wishlist for Coverage.so
+
+  - Oneshot useable for coverage calculations
+  - Oneshot branches
+
+  <!-- see 04-wishlist/onheshot.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start oneshot_lines: :boolean
+  require_relative 'example'
+  example 1
+  Coverage.result
+  {"example.rb"=>{:oneshot_lines=>[true, false, nil, true]}}
+  ```
+
+  ???
+
+  Could simply grep false and report on that
+
+  ---
+
+  # Wishlist for Coverage.so
+
+  Coverage for default parameters
+
+  ```Ruby
+  def foo(a = default)
+    puts a
+  end
+  ```
+
+  ---
+
+  # Wishlist for Coverage.so
+
+  Coverage for logical operators
+
+  ```Ruby
+  # covered
+  success || raise("Ooops")
+
+  # not covered
+  raise("Ooops") unless success
+  ```
 
   ---
   class: center, middle
 
   # Thank you!
 
-  github.com/grosser/ruby-coverage-talk
+  <table>
+  <tr><td>github.com/grosser/</td><td style="text-align: left">ruby-coverage-talk</td></tr>
+  <tr><td></td><td style="text-align: left">single_cov</td></tr>
+  <tr><td></td><td style="text-align: left">forking_test_runner</td></tr>
+  <tr><td></td><td style="text-align: left">maxitest</td></tr>
+  <tr><td></td><td style="text-align: left">testrbl</td></tr>
+  </table>
+
+  ???
+
+  Slides / examples / PRs welcome
 
 </textarea>
 <script src="assets/remark-latest.min.js">
