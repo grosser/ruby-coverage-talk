@@ -301,6 +301,15 @@
 
   ---
 
+  # Recap
+
+  - `Coverage.start <nothing>` = simple
+  - `Coverage.start branches: true` = weird but useful
+  - `Coverage.start oneshot_lines: true` = fast but hard to use
+  - `Coverage.result / Coverage.peek_result`
+
+  ---
+
   # Plan
 
   - <del>Code Coverage Internals</del>
@@ -423,6 +432,14 @@
 
   ---
 
+  # Recap
+
+  - Use `single_cov` + `forking_test_runner`
+  - Stop the bleeding
+  - Divide and conquer
+
+  ---
+
   # Plan
 
   - <del>Code Coverage Internals</del>
@@ -499,6 +516,13 @@
 
   - Gem I built that integrates well with single_cov and makes CI coverage same as local
   - maybe in the future oneshot
+
+  ---
+
+  # Recap
+
+  - fork and coverage don't play nice
+  - use peek_result to get results in-between
 
   ---
 
@@ -579,6 +603,36 @@
   ```
 
   ---
+
+  # Wishlist for Coverage.so
+
+  Path coverage
+
+  ```Ruby
+  a = a ? : 1 : 2
+  a = a ? : 3 : 4
+  ```
+
+  4 Paths through this code
+  1/3 + 1/4 + 2/3 + 2/4
+
+  ???
+
+  super annoying to get 100% coverage but could be interesting for security/complicated things
+
+  ---
+
+  # Recap
+
+  - make fork not wipe coverage
+  - make oneshot automatable
+  - oneshot branches
+  - default params coverage
+  - logical operators coverage
+  - path coverage
+
+  ---
+
   class: center, middle
 
   # Thank you!
