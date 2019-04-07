@@ -8,6 +8,16 @@
       font-family: "Lucida Grande", sans-serif;
     }
 
+    /* make slides and background not have gap between them */
+    .remark-slide-scaler {
+      -webkit-box-shadow: none;
+    }
+
+    /* make slides and background blend in */
+    .remark-container {
+      background: #272822;
+    }
+
     .remark-code, .remark-inline-code {
       font-family: 'Monaco', monospace;
     }
@@ -25,7 +35,7 @@
     }
 
     .remark-slide-content h1 {
-      font-size: 52px;
+      font-size: 50px;
     }
 
     .remark-slide-number {
@@ -48,8 +58,8 @@
 
   ???
 
-  This talk is about understanding code coverage internals and
-  how to turn coverage it into a helpful tool instead of just an afterthought.
+  - Understanding code coverage
+  - How to turn coverage it into a helpful tool instead of an afterthought
 
   ---
   class: center, middle
@@ -60,15 +70,14 @@
 
   ???
 
-  not a talk, but a repo with runnable examples and slides written in markdown to be maintainable
-  a deep dive into what new developers should know about coverage and
-  how to better utilize coverage.
+  - not just a talk, but repo with runnable examples + markdown slides
+  - a maintainable deep dive for new developers (intro + workflows + limits)
 
   ---
 
   # Michael Grosser
 
-  Staff Engineer @ Zendesk<br/>
+  Senior Staff Engineer @ Zendesk<br/>
   (Hiring in SF/Madison/Dublin/CPH/Sydney)
 
   <table>
@@ -86,33 +95,32 @@
 
   ???
 
-  Big part of my job is to help other devs by building infrastructure to make them more efficient.
-
-  I've build lots of gems for testing and coverage and onboarded giant projects on them.
+  - job: help other devs, build infrastructure, make them more efficient
+  - build lots of gems for testing + coverage and onboarded giant projects on them
 
   ---
 
   # Plan
 
-  - Code Coverage Internals
+  - Code Coverage Overview
   - Actionable Coverage
-  - Hack forked coverage
+  - Hack Forked Coverage
   - Wishlist for Coverage.so
 
   ???
 
-  - internals: get everyone onto the same level
+  - overview: get everyone onto the same level
   - action: problems with current approaches, how to improve them, how to migrate projects piecemeal without breaking
   - fork: how parallel processes can share coverage calculations
+  - wishlist: basics for better tooling
 
   ---
 
-  # Code Coverage Internals
+  # Code Coverage Overview
 
-  - Needs to be enabled
-  - Hooks around newly loaded code
-  - Not retroactive
-  - Not free
+  - builtin C library, no gems needed
+  - Enable before loading code
+  - Slows down execution
 
   ---
 
@@ -131,6 +139,7 @@
 
   ???
 
+  - simplest form
   - result has side-effect of disabling, can use peek_result
   - 1 = hit once
   - 0 = never hit
@@ -144,19 +153,19 @@
   ```Ruby
   {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
 
-  def example             # Covered
-    if 1 == 2             # Covered
-      "a"                 # Not-Covered
-    else                  # -
-      3 == 2 ? "b" : "c"  # Covered
-    end                   # -
-  end                     # -
+  def example             # 1 - Covered, loaded not ran
+    if 1 == 2             # 1 - Covered, ran once
+      "a"                 # 0 - Not-Covered
+    else                  # nil
+      3 == 2 ? "b" : "c"  # 1 - Covered, ran once
+    end                   # nil
+  end                     # nil
   ```
 
   ???
 
   - we hit example and the second branch
-  - problem: 3==2 has 2 outcomes, "b" never reached ... should rewrite as *next slide*
+  - problem: in else the 3==2 has 2 outcomes, "b" never reached ... should rewrite as *next slide*
 
   ---
 
@@ -167,11 +176,11 @@
   {"example.rb"=>[1, 1, 0, nil, 1, 0, nil, 1, nil, nil, nil]}
                                 =================
   ...
-      if 3 == 2           # Covered
-        "b"               # Not Covered
-      else                # -
-        "c"               # Covered
-      end                 # -
+      if 3 == 2           # 1 - Covered
+        "b"               # 0 - Not Covered
+      else                # nil
+        "c"               # 1 - Covered
+      end                 # nil
   ...
   ```
 
@@ -203,6 +212,7 @@
 
   ```Ruby
   "example.rb"=>{:branches=>{
+    # type, id, start line, start char, end line, end char
     [:if, 0, 5, 4, 5, 22]=>{
       [:then, 1, 5, 13, 5, 16]=>0,
       [:else, 2, 5, 19, 5, 22]=>1
@@ -224,7 +234,7 @@
 
   <!-- see 01-Internals/example.rb -->
   ```Ruby
-  # line 5 c 4-22 = Y | line 5 c 13 16 = N | line 5 c 19-22 = Y
+  # char 4-22 = Y | char 13-16 = N | char 19-22 = Y
 
   def example
     if 1 == 2
@@ -239,9 +249,8 @@
 
   ???
 
-  - "a" is not covered, but else is covered ... "b" is not covered, but "c" is
-  - with these basic tool it's easy to build coverage analysis
-  - why not always branch ? efficiency is bad especially when run in prod to find dead code... use oneshot
+  - enough info for simple tooling
+  - downsides: too slow to run in prod to find dead code (oneshot), does not detect ||= / optional params
 
   ---
 
@@ -259,8 +268,9 @@
 
   ???
 
-  - after a part is executed the counter code is removed, removing performance penalty
-  - does not offer oneshot_branches ... so incomplete
+  - line numbbers not counters
+  - fast: removed after execution
+  - no oneshot_branches
 
   ---
 
@@ -279,7 +289,7 @@
 
   ???
 
-  - only shows the line number that are covered, not uncovered, so bad for automatic reporting (no nils)
+  - bad for automation: only shows the line number that are covered, not uncovered/uncoverable
 
   ---
 
@@ -297,7 +307,7 @@
 
   ???
 
-  - to improve performance use `set_trace_func` directly via sampling approach
+  - to improve performance use `set_trace_func` directly via sampling approach (coverband)
 
   ---
 
@@ -315,7 +325,7 @@
 
   # Recap
 
-  - `Coverage.start <nothing>` = simple
+  - `Coverage.start` = simple lines
   - `Coverage.start branches: true` = weird but useful
   - `Coverage.start oneshot_lines: true` = fast but hard to use
   - `Coverage.result / Coverage.peek_result`
@@ -324,20 +334,33 @@
 
   # Plan
 
-  - <del>Code Coverage Internals</del>
+  - <del>Code Coverage Overview</del>
   - Actionable Coverage
-  - Hack forked coverage
+  - Hack Forked Coverage
   - Wishlist for Coverage.so
 
   ---
 
   # Actionable Coverage
 
+  - Mindset
   - Problems
   - Solution
   - Migrating
 
   ---
+
+  # Mindset
+
+  - Not a metric, easy to cheat on <br/>100% coverage != good test
+  - A helper/fallback: <br/>
+  "Did you write a test for that ?"<br/>
+  "Why does it rescue ?"<br/>
+  "What happens when xyz ?"
+
+  ???
+
+  - cheat: use `||` instead of if, only unit test
 
   # Problems
 
@@ -345,15 +368,14 @@
   - Impossible to reach 100% coverage
   - Bikeshedding about what % is ok
   - Complicated setup
-  - Hard to parse
 
   ???
 
   - slow: have to make PR and wait for hook, run all tests, open browser
   - 100%: setup code and edge-cases
-  - bike: 100% cannot be reached so we guess, feels like broken window
+  - bike: 100% cannot be reached so we guess, feels like broken window,
+    rewrite a statement to be readable and suddenly it's not covered
   - setup: install hooks / pay providers / explain to contributors
-  - coarse: rewrite a statement to be readable and suddenly it's not covered
 
   ---
 
@@ -367,7 +389,8 @@
   ???
 
   - the solution we need is ...
-  - quick: run a single file, small runtime overhead, exact location, console output
+  - quick: run a single file, matches a single test, small runtime overhead, exact location, console output
+  - easy to contribute when tests are easy to find
   - call out gaps explicitly, raise awareness when editing code, 100% avoid broken windows, fail bad PRs
   - encourage seeking quick local feedback instead of taking a break after PRs
   - ignore: call out gaps, but keep 100%
@@ -454,9 +477,9 @@
 
   # Plan
 
-  - <del>Code Coverage Internals</del>
+  - <del>Code Coverage Overview</del>
   - <del>Actionable Coverage</del>
-  - Hack forked coverage
+  - Hack Forked Coverage
   - Wishlist for Coverage.so
 
   ---
@@ -540,7 +563,7 @@
 
   # Plan
 
-  - <del>Code Coverage Internals</del>
+  - <del>Code Coverage Overview</del>
   - <del>Actionable Coverage</del>
   - <del>Hack forked coverage</del>
   - Wishlist for Coverage.so
@@ -665,7 +688,12 @@
 <script src="assets/remark-latest.min.js">
 </script>
 <script>
-  remark.create();
+  remark.create(
+    {
+      ratio: '4:3',
+      highlightLanguage: 'ruby'
+    }
+  );
 </script>
 </body>
 </html>
