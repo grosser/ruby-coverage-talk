@@ -58,8 +58,8 @@
 
   ???
 
-  - Understanding code coverage
-  - How to turn coverage it into a helpful tool instead of an afterthought
+  - Understanding how code coverage works and it's limitations
+  - How to turn coverage it into a helpful tool instead of an afterthought/metric
 
   ---
   class: center, middle
@@ -105,13 +105,13 @@
   - Code Coverage Overview
   - Actionable Coverage
   - Hack Forked Coverage
-  - Wishlist for Coverage.so
+  - Coverage Wishlist
 
   ???
 
   - overview: get everyone onto the same level
   - action: problems with current approaches, how to improve them, how to migrate projects piecemeal without breaking
-  - fork: how parallel processes can share coverage calculations
+  - fork: how parallel/forked processes can share coverage calculations
   - wishlist: basics for better tooling
 
   ---
@@ -337,7 +337,7 @@
   - <del>Code Coverage Overview</del>
   - Actionable Coverage
   - Hack Forked Coverage
-  - Wishlist for Coverage.so
+  - Coverage Wishlist
 
   ---
 
@@ -480,7 +480,7 @@
   - <del>Code Coverage Overview</del>
   - <del>Actionable Coverage</del>
   - Hack Forked Coverage
-  - Wishlist for Coverage.so
+  - Coverage Wishlist
 
   ---
 
@@ -520,6 +520,7 @@
   # Hack forked coverage
 
 
+  <!-- see 03-forked/combine_in_fork.rb -->
   ```Ruby
   # ... load everything
   stored = Coverage.peek_result
@@ -554,6 +555,28 @@
 
   ---
 
+  # Combine in parent
+
+  fork & combine coverage
+
+  <!-- see 03-forked/combine_in_parent.rb -->
+  ```Ruby
+  # ... load everything
+  read, write = IO.pipe
+  Process.wait(fork do
+    # ... test
+    Marshal.dump(Coverage.result, write)
+  end)
+  result = Coverage.result + Marshal.load(read)
+  {"example.rb"=>[1, 2, 1, nil, 1, nil, nil]}
+  ```
+
+  ???
+
+  test destructive behavior in fork and combine after
+
+  ---
+
   # Recap
 
   - fork and coverage don't play nice
@@ -566,11 +589,11 @@
   - <del>Code Coverage Overview</del>
   - <del>Actionable Coverage</del>
   - <del>Hack forked coverage</del>
-  - Wishlist for Coverage.so
+  - Coverage Wishlist
 
   ---
 
-  # Wishlist for Coverage.so
+  # Coverage Wishlist
 
   Adding coverage in forks without hacks
 
@@ -592,7 +615,7 @@
 
   ---
 
-  # Wishlist for Coverage.so
+  # Coverage Wishlist
 
   - Oneshot useable for coverage calculations
   - Oneshot branches
@@ -613,7 +636,7 @@
 
   ---
 
-  # Wishlist for Coverage.so
+  # Coverage Wishlist
 
   Coverage for default parameters
 
@@ -625,7 +648,7 @@
 
   ---
 
-  # Wishlist for Coverage.so
+  # Coverage Wishlist
 
   Coverage for logical operators
 
@@ -639,7 +662,7 @@
 
   ---
 
-  # Wishlist for Coverage.so
+  # Coverage Wishlist
 
   Path coverage
 
