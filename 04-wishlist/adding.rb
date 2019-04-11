@@ -1,5 +1,5 @@
 require 'coverage'
-Coverage.start add_on_fork: true
+Coverage.start inherit_on_fork: true
 require_relative 'example'
 example 1
 fork do

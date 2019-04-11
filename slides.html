@@ -122,6 +122,10 @@
   - Enable before loading code
   - Slows down execution
 
+  ???
+
+  - slow: do not always run in tests
+
   ---
 
   # Line Coverage
@@ -250,7 +254,9 @@
   ???
 
   - enough info for simple tooling
-  - downsides: too slow to run in prod to find dead code (oneshot), does not detect ||= / optional params
+  - slower than line
+  - does not detect ||= / optional params
+  - for prod to find dead code prefer oneshot
 
   ---
 
@@ -268,7 +274,6 @@
 
   ???
 
-  - line numbbers not counters
   - fast: removed after execution
   - no oneshot_branches
 
@@ -278,6 +283,7 @@
 
   <!-- see 01-Internals/example.rb -->
   ```Ruby
+  # {"example.rb"=>{:oneshot_lines=>[1, 2, 5]}}
   def example             # Covered
     if 1 == 2             # Covered
       "a"                 # ?
@@ -289,7 +295,8 @@
 
   ???
 
-  - bad for automation: only shows the line number that are covered, not uncovered/uncoverable
+  - bad for automation, does not show uncovered/uncoverable<br/>
+  need ruby parser to know what is uncoverable
 
   ---
 
@@ -346,13 +353,35 @@
   - Mindset
   - Problems
   - Solution
-  - Migrating
+  - Migration
 
   ---
 
   # Mindset
 
-  - Not a metric, easy to cheat on <br/>100% coverage != good test
+  - Not a metric, easy to cheat on
+
+  ???
+
+  - cheat: use `||` instead of if, only unit test
+
+  ---
+
+  # Mindset
+
+  - Not a metric, easy to cheat on
+  - 100% coverage != good test
+
+  ???
+
+  - 100% = no stupid errors
+
+  ---
+
+  # Mindset
+
+  - Not a metric, easy to cheat on
+  - 100% coverage != good test
   - A helper/fallback: <br/>
   "Did you write a test for that ?"<br/>
   "Why does it rescue ?"<br/>
@@ -360,9 +389,47 @@
 
   ???
 
-  - cheat: use `||` instead of if, only unit test
+  - often thought I had coverage but never covered edge case / edge cas was unreachable
+
+  ---
 
   # Problems
+
+  - Slow feedback
+
+  ???
+
+  - have to make PR and wait for hook, run all tests, open browser
+  - adds frustration / not actionable
+
+  ---
+
+  # Problems
+
+  - Slow feedback
+  - Impossible to reach 100% coverage
+
+  ???
+
+  - setup code and edge-cases
+  - broken window effect
+
+  ---
+
+    # Problems
+
+  - Slow feedback
+  - Impossible to reach 100% coverage
+  - Bikeshedding about what % is ok
+
+  ???
+
+  - 100% cannot be reached so we guess
+  - rewrite a statement to be readable and suddenly it's not covered
+
+  ---
+
+    # Problems
 
   - Slow feedback
   - Impossible to reach 100% coverage
@@ -371,11 +438,42 @@
 
   ???
 
-  - slow: have to make PR and wait for hook, run all tests, open browser
-  - 100%: setup code and edge-cases
-  - bike: 100% cannot be reached so we guess, feels like broken window,
-    rewrite a statement to be readable and suddenly it's not covered
-  - setup: install hooks / pay providers / explain to contributors
+  - install webhooks
+  - pay providers
+  - get accounts for contributors
+  - error? -> irreproducible locally
+
+  ---
+
+  # Solution
+
+  ???
+
+  - the solution we need is ...
+
+  ---
+
+  # Solution
+
+  - quick, atomic development feedback
+
+  ???
+
+  - run a single file, matches a single test, small runtime overhead, exact location, console output
+  - easy to contribute when tests are easy to find
+  - encourage seeking quick local feedback instead of taking a break after PRs
+  - bad PRs still fail but can be reproduced
+
+  ---
+
+  # Solution
+
+  - quick, atomic development feedback
+  - mark intentional gaps to get 100%
+
+  ???
+
+  - call out gaps explicitly, raise awareness when editing code, 100% avoid broken windows
 
   ---
 
@@ -384,16 +482,19 @@
   - quick, atomic development feedback
   - mark intentional gaps to get 100%
   - simple/local/free setup
-  - fine grained coverage
 
   ???
 
-  - the solution we need is ...
-  - quick: run a single file, matches a single test, small runtime overhead, exact location, console output
-  - easy to contribute when tests are easy to find
-  - call out gaps explicitly, raise awareness when editing code, 100% avoid broken windows, fail bad PRs
-  - encourage seeking quick local feedback instead of taking a break after PRs
-  - ignore: call out gaps, but keep 100%
+  who wants a complicated, remote, paid setup ?
+
+  ---
+
+  # Solution
+
+  - quick, atomic development feedback
+  - mark intentional gaps to get 100%
+  - simple/local/free setup
+  - branch coverage
 
   ---
 
@@ -414,8 +515,11 @@
 
   ???
 
-  - Catch coverage issues before making PRs
-  - Makes PRs fail when coverage is missing
+  - minitest + rspec
+  - catch coverage issues before making PRs
+  - makes PRs fail when coverage is missing
+  - calls out exact location
+  - configure allowed gaps
 
   ---
 
@@ -426,18 +530,15 @@
   ```Ruby
   SingleCov.covered! uncovered: 42
 
-  SingleCov.not_covered!
+  SingleCov.assert_used   # all tests have coverage
 
-  SingleCov.assert_used
-
-  SingleCov.assert_tested
+  SingleCov.assert_tested # all files have tests
   ```
 
   ???
 
-  - Stops newly uncovered code and allows slowly working through backlog.
-  - Not-covered for integration tests / shell-out
-  - All configurable to call out gaps explicitly
+  - stops newly uncovered code and allows slowly working through backlog
+  - helpers to test all files have tests
 
   ---
 
@@ -449,7 +550,7 @@
 
   ---
 
-  # Migrating
+  # Migration
 
   Automated onboarding + divide & conquer
 
@@ -469,9 +570,9 @@
 
   # Recap
 
+  - Want local/fast feedback with marked uncovered
   - Use `single_cov` + `forking_test_runner`
-  - Stop the bleeding
-  - Divide and conquer
+  - Stop the bleeding, then divide and conquer
 
   ---
 
@@ -513,7 +614,7 @@
 
   ???
 
-  Makes full coverage unreachable since for example loading the class cannot be done again
+  Makes full coverage unreachable since requires cannot be redone
 
   ---
 
@@ -523,18 +624,30 @@
   <!-- see 03-forked/combine_in_fork.rb -->
   ```Ruby
   # ... load everything
-  stored = Coverage.peek_result
+  peek = Coverage.peek_result
   fork do
     # ... test
     result = Coverage.result.map do |file, cov|
-      old = stored[file]
       cov.each_with_index.map do |c, i|
-        old[i] ? old[i] + c : c
+        peek[file][i] ? peek[file][i] + c : c
       end
     end
   end
   {"example.rb"=>[1, 2, 1, nil, 1, nil, nil]}
   ```
+
+  ---
+
+  # Hack forked coverage
+
+  ```Bash
+  forking-test-runner test/ --merge-coverage
+  ```
+
+  ???
+
+  - under the hood of forking-test-runner
+  - integrates well with single_cov and makes CI coverage same as local (often more because it runs all tests)
 
   ---
 
@@ -550,7 +663,6 @@
 
   ???
 
-  - Gem I built that integrates well with single_cov and makes CI coverage same as local
   - maybe in the future oneshot
 
   ---
@@ -581,6 +693,7 @@
 
   - fork and coverage don't play nice
   - use peek_result to get results in-between
+  - use IO.pipe to send coverage
 
   ---
 
@@ -591,33 +704,15 @@
   - <del>Hack forked coverage</del>
   - Coverage Wishlist
 
-  ---
-
-  # Coverage Wishlist
-
-  Adding coverage in forks without hacks
-
-  <!-- see 04-wishlist/adding.rb -->
-  ```Ruby
-  require 'coverage'
-  Coverage.start add_on_fork: true
-  require_relative 'example'
-  example 1
-  fork do
-    example 2
-    Coverage.result
-  end
-  ```
-
   ???
 
-  Especially for branches lots of logic
+  backend tools we need to improve coverage tooling
 
   ---
 
   # Coverage Wishlist
 
-  - Oneshot useable for coverage calculations
+  - Oneshot usable for coverage calculations
   - Oneshot branches
 
   <!-- see 04-wishlist/onheshot.rb -->
@@ -638,6 +733,28 @@
 
   # Coverage Wishlist
 
+  Inherit coverage in forks
+
+  <!-- see 04-wishlist/adding.rb -->
+  ```Ruby
+  require 'coverage'
+  Coverage.start inherit_on_fork: true
+  require_relative 'example'
+  example 1
+  fork do
+    example 2
+    Coverage.result
+  end
+  ```
+
+  ???
+
+  branch coverage needs lots of merge logic
+
+  ---
+
+  # Coverage Wishlist
+
   Coverage for default parameters
 
   ```Ruby
@@ -645,6 +762,8 @@
     puts a
   end
   ```
+
+  a was passed in <-> a was not passed in
 
   ---
 
@@ -680,14 +799,25 @@
 
   ---
 
+  # Coverage Wishlist
+
+  Turn on for loaded code -> per request/controller coverage
+
+  ```Ruby
+  Coverage.start add_to_existing: true
+  ```
+
+  ---
+
   # Recap
 
-  - make fork not wipe coverage
   - make oneshot automatable
   - oneshot branches
+  - inherit coverage on fork
   - default params coverage
   - logical operators coverage
   - path coverage
+  - work for preloaded code
 
   ---
 
