@@ -46,6 +46,14 @@
       padding: 5px 10px;
       text-align: right;
     }
+
+    .remark-notes {
+      font-size: 40px;
+    }
+
+    .remark-notes-preview {
+      font-size: 30px;
+    }
   </style>
 </head>
 <body>
@@ -58,7 +66,7 @@
 
   ???
 
-  - Understanding how code coverage works and it's limitations
+  - How code coverage works and it's limitations
   - How to turn coverage it into a helpful tool instead of an afterthought/metric
 
   ---
@@ -71,7 +79,7 @@
   ???
 
   - not just a talk, but repo with runnable examples + markdown slides
-  - a maintainable deep dive for new developers (intro + workflows + limits)
+  - a maintainable deep dive for new developers
 
   ---
 
@@ -103,16 +111,61 @@
   # Plan
 
   - Code Coverage Overview
+
+  ???
+
+  - get everyone onto the same level
+
+  ---
+
+  # Plan
+
+  - Code Coverage Overview
+  - Actionable Coverage
+
+  ???
+
+  - problems with current approaches
+  - solutions
+  - how to migrate projects piecemeal without breaking
+
+  ---
+
+  # Plan
+
+  - Code Coverage Overview
+  - Actionable Coverage
+  - Hack Forked Coverage
+
+  ???
+
+  - how parallel/forked processes can share coverage calculations
+
+  ---
+
+  # Plan
+
+  - Code Coverage Overview
   - Actionable Coverage
   - Hack Forked Coverage
   - Coverage Wishlist
 
   ???
 
-  - overview: get everyone onto the same level
-  - action: problems with current approaches, how to improve them, how to migrate projects piecemeal without breaking
-  - fork: how parallel/forked processes can share coverage calculations
-  - wishlist: basics for better tooling
+  - basics for better tooling
+
+  ---
+
+  # Code Coverage Overview
+
+  - builtin C library, no gems needed
+
+  ---
+
+  # Code Coverage Overview
+
+  - builtin C library, no gems needed
+  - Enable before loading code
 
   ---
 
@@ -144,10 +197,9 @@
   ???
 
   - simplest form
-  - result has side-effect of disabling, can use peek_result
-  - 1 = hit once
-  - 0 = never hit
-  - nil = not code (end/else etc)
+  - .result has side-effect of disabling, can use peek_result
+  - 0/1 = hit count
+  - nil = not code (end/else/comment etc)
 
   ---
 
@@ -229,8 +281,10 @@
 
   ???
 
-  - big hash where keys are the branches ... ignore + first 2 items are kind+index ... ignore
-  - only care for last 4 items ... look back at code
+  - big hash where keys are the branches
+  - ignore branches + first 2 items are kind+index
+  - only care for last 4 items
+  - ... look back at code
 
   ---
 
@@ -254,8 +308,8 @@
   ???
 
   - enough info for simple tooling
-  - slower than line
   - does not detect ||= / optional params
+  - slower than line
   - for prod to find dead code prefer oneshot
 
   ---
@@ -363,7 +417,8 @@
 
   ???
 
-  - cheat: use `||` instead of if, only unit test
+  - use `||` instead of if
+  - only unit test
 
   ---
 
@@ -375,6 +430,7 @@
   ???
 
   - 100% = no stupid errors
+  - not no logical errors
 
   ---
 
@@ -389,7 +445,8 @@
 
   ???
 
-  - often thought I had coverage but never covered edge case / edge cas was unreachable
+  - often thought I had coverage but never covered edge case
+  - edge case was unreachable
 
   ---
 
@@ -481,11 +538,7 @@
 
   - quick, atomic development feedback
   - mark intentional gaps to get 100%
-  - simple/local/free setup
-
-  ???
-
-  who wants a complicated, remote, paid setup ?
+  - branch coverage
 
   ---
 
@@ -493,8 +546,12 @@
 
   - quick, atomic development feedback
   - mark intentional gaps to get 100%
-  - simple/local/free setup
   - branch coverage
+  - simple/local/free setup
+
+  ???
+
+  who wants a complicated, remote, paid setup ?
 
   ---
 
@@ -509,7 +566,7 @@
 
   lib/foobar.rb new uncovered lines introduced (2 current vs 0 configured)",
   Uncovered lines:
-  lib/foobar.rb:22
+  lib/foobar.rb:22:10-22:14
   lib/foobar.rb:23
   ```
 
@@ -525,34 +582,29 @@
 
   # SingleCov
 
-  Automatic bootstrap script to add coverage enforcement for legacy apps
-
-  ```Ruby
-  SingleCov.covered! uncovered: 42
-
-  SingleCov.assert_used   # all tests have coverage
-
-  SingleCov.assert_tested # all files have tests
-  ```
-
-  ???
-
-  - stops newly uncovered code and allows slowly working through backlog
-  - helpers to test all files have tests
+  - 2-5% runtime overhead on single files, compared to 10-20% for SimpleCov
+  - Branch coverage on ruby 2.5+ (disable via branches: false)
+  - Use with `forking_test_runner` for per test coverage
 
   ---
 
   # SingleCov
 
-  - 2-5% runtime overhead on single files, compared to 10-20% for SimpleCov
-  - Branch coverage on ruby 2.5+ (disable via branches: false)
-  - Use with forking_test_runner for per test coverage
+  Automatic bootstrap script to add coverage enforcement for legacy apps
+
+  ```Ruby
+  ... bootstrap spec/**/*_spec.rbb
+
+  SingleCov.covered! uncovered: 42
+  ```
+
+  ???
+
+  - stops newly uncovered code and allows slowly working through backlog
 
   ---
 
-  # Migration
-
-  Automated onboarding + divide & conquer
+  # SingleCov
 
   Inline comments
 
@@ -568,11 +620,25 @@
 
   ---
 
+  # SingleCov
+
+  ```Ruby
+  SingleCov.assert_used   # all tests have coverage
+
+  SingleCov.assert_tested # all files have tests
+  ```
+
+  ???
+
+  - helpers to test all files have coverage+tests
+
+  ---
+
   # Recap
 
-  - Want local/fast feedback with marked uncovered
-  - Use `single_cov` + `forking_test_runner`
-  - Stop the bleeding, then divide and conquer
+  - Local/fast/free feedback with marked uncovered
+  - `single_cov` + `forking_test_runner` = 💖
+  - Stop the bleeding + divide and conquer
 
   ---
 
@@ -587,14 +653,40 @@
 
   # Hack forked coverage
 
-  - Avoid having to run all tests
-  - Unit tests should cover file under test
-  - Fork to capture per-file coverage
+  ???
+
+  - why ?
+
+  ---
+
+  # Hack forked coverage
+
+  - Run all == run single
+
+  ---
+
+  # Hack forked coverage
+
+  - Run all == run single
+  - Pre-fork for speedup
 
   ???
 
-  - Can still have integration tests, but unit have to cover all code
-  - but forking does not play nice with coverage ... *flip*
+  Don't boot up for each test
+
+  ---
+
+  # Hack forked coverage
+
+  - Run all == run single
+  - Pre-fork for speedup
+  - Avoid pollution + capture per file coverage
+
+  ???
+
+  - Unit tests check coverage in isolation
+  - addition integration tests ok
+  - forking does not play nice with coverage ... *flip*
 
   ---
 
@@ -636,6 +728,10 @@
   {"example.rb"=>[1, 2, 1, nil, 1, nil, nil]}
   ```
 
+  ???
+
+  Store prefork, test, add
+
   ---
 
   # Hack forked coverage
@@ -657,9 +753,8 @@
   forking-test-runner test/ --merge-coverage
   ```
 
-  - handles edge-cases
+  - handles branch coverage / edge-cases
   - preloads AR fixtures / helpers etc
-  - handles branch coverage
 
   ???
 
@@ -712,8 +807,7 @@
 
   # Coverage Wishlist
 
-  - Oneshot usable for coverage calculations
-  - Oneshot branches
+  Oneshot usable for coverage calculations
 
   <!-- see 04-wishlist/onheshot.rb -->
   ```Ruby
@@ -728,6 +822,26 @@
   ???
 
   Could simply grep false and report on that
+
+  ---
+
+  # Coverage Wishlist
+
+  Oneshot branches
+
+  ```Ruby
+  require 'coverage'
+  Coverage.start oneshot_branches: true
+  require_relative 'example'
+  example 1
+  Coverage.result
+  {"example.rb"=>{:oneshot_branches=>{ .. branches ... }}}
+  ```
+
+  ???
+
+  - production coverage (low overhead + peek_result endpoint)
+  - combine all servers for coverage map
 
   ---
 
@@ -749,7 +863,7 @@
 
   ???
 
-  branch coverage needs lots of merge logic
+  avoid merge logic for branch/oneshot
 
   ---
 
