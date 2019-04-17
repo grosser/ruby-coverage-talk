@@ -634,11 +634,180 @@
 
   ---
 
+  # SingleCov
+
+  `https://github.com/grosser/go-testcov`
+  ... build your own!
+
+  ---
+
+  # SingleCov Demo
+
+  ???
+
+  - No real demo because I'm scared
+  - Randomly picked project and file, not cherry-picked because it's bad
+  - Not trying to pick on maintainers, just making a point
+  - you think your tests are good, they are not
+  - Same is seen all over ruby land ... some accepted PRs
+
+  ---
+
+  # SingleCov Demo
+
+  - clone `https://github.com/rails/rails`
+  - add `gem 'single_cov'` + `bundle`
+  - `cd activesupport`
+
+  ???
+
+  obscure project ;)
+
+  ---
+
+  # SingleCov Demo
+
+  ```Ruby
+  # test/abstract_unit.rb
+
+  require 'single_cov'
+  SingleCov.setup :minitest, root: File.dirname(__dir__)
+  ```
+
+  ???
+
+  gems are in subfolders
+
+  ---
+
+  # SingleCov Demo
+
+  ```Ruby
+  # test/cache/stores/memory_store_test.rb
+
+  SingleCov.covered! file:
+    'lib/active_support/cache/memory_store.rb'
+  # standard: lib/cache/stores/memory_store.rb
+  ```
+
+  ???
+
+  - reminder for bad  test structure
+  - IDE cmd+shift+T
+
+  ---
+
+  # SingleCov Demo
+
+  ```Bash
+  ruby -Itest test/cache/stores/memory_store_test.rb
+  .............................................
+
+  Finished
+  89 runs, 249 assertions, 0 failures, 0 errors, 0 skips
+  lib/active_support/cache/memory_store.rb
+  new uncovered lines introduced (9 current vs 0 configured)
+  ...
+  ```
+
+  ---
+
+  # SingleCov Demo
+
+
+  ```Bash
+  Lines missing coverage:
+  lib/active_support/cache/memory_store.rb:35
+  lib/active_support/cache/memory_store.rb:40
+  lib/active_support/cache/memory_store.rb:41
+  lib/active_support/cache/memory_store.rb:42
+  lib/active_support/cache/memory_store.rb:43
+  lib/active_support/cache/memory_store.rb:54:13-54:39
+  lib/active_support/cache/memory_store.rb:62:9-62:15
+  lib/active_support/cache/memory_store.rb:107
+  lib/active_support/cache/memory_store.rb:157:13-157:60
+  ```
+
+  ---
+
+  # SingleCov Demo
+
+  ```
+  # Advertise cache versioning support.
+  def self.supports_cache_versioning?
+    true
+  end
+  ```
+
+  ???
+
+  Trivial ... add #uncovered
+
+  ---
+
+  # SingleCov Demo
+
+  ```Ruby
+  def inspect # :nodoc:
+    "<##{self.class.name} entries=#{@data.size}," \
+      "size=#{@cache_size}, options=#{@options.inspect}>"
+  end
+  ```
+
+  ???
+
+  Blows up when another exception tries to show the store / user debugs
+
+  ---
+
+  # SingleCov Demo
+
+  ```Ruby
+  # Delete all data stored in a given cache store.
+  def clear(options = nil)
+    synchronize do
+      @data.clear
+      @key_access.clear
+      @cache_size = 0
+    end
+  end
+  ```
+
+  ???
+
+  - We should have tests for this right ??
+  - Synchronize should have some test ?
+
+  ---
+
+  # SingleCov Demo
+
+  ```Ruby
+  # lib/active_support/cache/memory_store.rb:54:13-54:39
+  delete_entry(key, options) if entry && entry.expired?
+
+  # lib/active_support/cache/memory_store.rb:157:13-157:60
+  @cache_size -= cached_size(key, entry) if entry
+
+  # lib/active_support/cache/memory_store.rb:62:9-62:15
+  def prune(target_size, max_time = nil)
+    return if pruning?
+  ```
+
+  ???
+
+  - Untested behavior ...
+  - added without tests and nobody noticed
+  - had a test that now no longer works ?
+
+  ---
+
   # Recap
 
   - Local/fast/free feedback with marked uncovered
-  - `single_cov` + `forking_test_runner` = 💖
+  - `single_cov` 💖 `forking_test_runner`
   - Stop the bleeding + divide and conquer
+  - Add it to your gems
 
   ---
 
