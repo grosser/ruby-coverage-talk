@@ -68,6 +68,7 @@
 
   - How code coverage works and it's limitations
   - How to turn coverage it into a helpful tool instead of an afterthought/metric
+  - Actionable talk, use right now
 
   ---
   class: center, middle
@@ -103,6 +104,7 @@
 
   ???
 
+  - hiring: work-life balance + visas
   - job: help other devs, build infrastructure, make them more efficient
   - build lots of gems for testing + coverage and onboarded giant projects on them
 
@@ -187,17 +189,29 @@
   ```Ruby
   require 'coverage' # -> coverage.so
   Coverage.start     # enable for newly loaded code
+
   require_relative 'example'
   example
-  Coverage.result    # disable
 
-  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+  Coverage.result    # disable
   ```
 
   ???
 
   - simplest form
   - .result has side-effect of disabling, can use peek_result
+
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+  ```
+
+  ???
+
   - 0/1 = hit count
   - nil = not code (end/else/comment etc)
 
@@ -209,7 +223,32 @@
   ```Ruby
   {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
 
-  def example             # 1 - Covered, loaded not ran
+  def example             # 1 - Covered, defined not ran
+  ```
+
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+
+  def example             # 1 - Covered, defined not ran
+    if 1 == 2             # 1 - Covered, ran once
+      "a"                 # 0 - Not-Covered
+    else                  # nil
+  ```
+
+  ---
+
+  # Line Coverage
+
+  <!-- see 01-Internals/example.rb -->
+  ```Ruby
+  {"example.rb"=>[1, 1, 0, nil, 1, nil, nil]}
+
+  def example             # 1 - Covered, defined not ran
     if 1 == 2             # 1 - Covered, ran once
       "a"                 # 0 - Not-Covered
     else                  # nil
@@ -229,15 +268,15 @@
 
   <!-- see 01-Internals/example_expanded.rb -->
   ```Ruby
-  {"example.rb"=>[1, 1, 0, nil, 1, 0, nil, 1, nil, nil, nil]}
-                                =================
-  ...
+      3 == 2 ? "b" : "c"
+
+  -> Refactor
+
       if 3 == 2           # 1 - Covered
         "b"               # 0 - Not Covered
       else                # nil
         "c"               # 1 - Covered
       end                 # nil
-  ...
   ```
 
   ???
@@ -249,13 +288,11 @@
 
   # Branch Coverage
 
+  Ruby 2.5+
+
   <!-- see 01-Internals/coverage_branch.rb -->
   ```Ruby
-  require 'coverage'
-  Coverage.start branches: true # Ruby 2.5+
-  require_relative 'example'
-  example
-  Coverage.result
+  Coverage.start branches: true
   ```
 
   ???
@@ -267,67 +304,90 @@
   # Branch Coverage
 
   ```Ruby
-  "example.rb"=>{:branches=>{
-    # type, id, start line, start char, end line, end char
+  # lines
+  [1, 1, 0, nil, 1, nil, nil]
+
+  # branches
+  :branches=>{
     [:if, 0, 5, 4, 5, 22]=>{
       [:then, 1, 5, 13, 5, 16]=>0,
       [:else, 2, 5, 19, 5, 22]=>1
-    },
-    [:if, 3, 2, 2, 6, 5]=>{
-      [:then, 4, 3, 4, 3, 7]=>0,
-      [:else, 5, 5, 4, 5, 22]=>1
     }
+  }
   ```
-
-  ???
-
-  - big hash where keys are the branches
-  - ignore branches + first 2 items are kind+index
-  - only care for last 4 items
-  - ... look back at code
 
   ---
 
   # Branch Coverage
 
+  start line + char, end line + char => hits
+
+  ```Ruby
+  [..., 5, 13, 5, 16]=>0,
+  ```
+
+  ---
+
+  # Branch Coverage
+
+  char 4-22 = Y<br/>
+  char 13-16 = N<br/>
+  char 19-22 = Y<br/>
+
   <!-- see 01-Internals/example.rb -->
   ```Ruby
-  # char 4-22 = Y | char 13-16 = N | char 19-22 = Y
-
-  def example
-    if 1 == 2
-      "a"
-    else
-      3 == 2 ? "b" : "c"
-      YYYYYYYYYYYYYYYYYY
-               NNN   YYY
-    end
-  end
+  3 == 2 ? "b" : "c"
+  YYYYYYYYYYYYYYYYYY
+           NNN   YYY
   ```
 
   ???
 
   - enough info for simple tooling
-  - does not detect ||= / optional params
   - slower than line
-  - for prod to find dead code prefer oneshot
+
+  ---
+
+  # Branch Coverage
+
+  ```Ruby
+  foo == bar || raise("wut")
+
+  -> Refactor
+
+  raise("wut") unless foo == bar
+  ```
+
+  ???
+
+  does not break down || or ||=
+
+  ---
+
+    # Branch Coverage
+
+  ```Ruby
+  def foo(a = bar)
+  ```
+
+  ???
+
+  does not detect optional params
 
   ---
 
   # Oneshot Coverage
 
+  Ruby 2.6+
+
   <!-- see 01-Internals/coverage_oneshot.rb -->
   ```Ruby
-  require 'coverage'
-  Coverage.start oneshot_lines: true # Ruby 2.6+
-  require_relative 'example'
-  5.times { example }
-  Coverage.result
-  {"example.rb"=>{:oneshot_lines=>[1, 2, 5]}}
+  Coverage.start oneshot_lines: true
   ```
 
   ???
 
+  - for prod to find dead code prefer oneshot
   - fast: removed after execution
   - no oneshot_branches
 
@@ -335,9 +395,24 @@
 
   # Oneshot Coverage
 
+  ```Ruby
+  # lines
+  [1, 1, 0, nil, 1, nil, nil]
+
+  # oneshot
+  {:oneshot_lines=>[1, 2, 5]}
+  ```
+
+  ---
+
+  # Oneshot Coverage
+
+  ```Ruby
+  [1, 2, 5]
+  ```
+
   <!-- see 01-Internals/example.rb -->
   ```Ruby
-  # {"example.rb"=>{:oneshot_lines=>[1, 2, 5]}}
   def example             # Covered
     if 1 == 2             # Covered
       "a"                 # ?
@@ -349,8 +424,8 @@
 
   ???
 
-  - bad for automation, does not show uncovered/uncoverable<br/>
-  need ruby parser to know what is uncoverable
+  - bad for automation, does not show uncovered/uncoverable
+  - need ruby parser to know what is uncoverable
 
   ---
 
@@ -387,9 +462,9 @@
   # 🔄 Recap
 
   - `Coverage.start` = simple lines
-  - `Coverage.start branches: true` = weird but useful
-  - `Coverage.start oneshot_lines: true` = fast but hard to use
-  - `Coverage.result / Coverage.peek_result`
+  - `branches: true` = weird but useful
+  - `oneshot_lines: true` = fast, hard to use
+  - `.result / .peek_result`
 
   ---
 
@@ -642,7 +717,9 @@
 
   ```Ruby
   SingleCov.covered! uncovered: 1
-  ==
+
+  -> Refactor
+
   SingleCov.covered!
 
   if this_can_never_happen
