@@ -431,6 +431,7 @@
 
   - 100% = no stupid errors
   - not no logical errors
+  - Covered != tested
 
   ---
 
@@ -547,6 +548,20 @@
   - quick, atomic development feedback
   - mark intentional gaps to get 100%
   - branch coverage
+  - piecemeal migration approach
+
+  ???
+
+  cannot stop the world, need a place to start .. single file or static state
+
+  ---
+
+  # Solution
+
+  - quick, atomic development feedback
+  - mark intentional gaps to get 100%
+  - branch coverage
+  - piecemeal migration approach
   - simple/local/free setup
 
   ???
@@ -590,7 +605,24 @@
 
   # SingleCov
 
-  Automatic bootstrap script to add coverage enforcement for legacy apps
+  Start with a single test, no side-effects
+
+  ```Ruby
+  # test/foo_test.rb
+  SingleCov.covered!
+  ```
+
+  ???
+
+  - your work area/feature
+  - security features
+  - piecemeal onboarding
+
+  ---
+
+  # SingleCov
+
+  Stop coverage degradation: bootstrap script
 
   ```Ruby
   ... bootstrap spec/**/*_spec.rbb
@@ -799,6 +831,16 @@
   - Untested behavior ...
   - added without tests and nobody noticed
   - had a test that now no longer works ?
+
+  ---
+
+  # SingleCov Demo
+
+  👍 github.com/rails/rails/pulls/11111
+
+  ???
+
+  To support please upvote
 
   ---
 
